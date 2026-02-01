@@ -100,6 +100,7 @@ export default function App() {
   
   // System State
   const [isLoading, setIsLoading] = useState(true);
+  
   // Persistent Login State
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
@@ -111,7 +112,20 @@ export default function App() {
   });
   
   const [isLoginPageOpen, setIsLoginPageOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('DASHBOARD');
+  
+  // View Mode: Initialize based on saved user role to restore correct screen on reload
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('ls_user');
+      if (saved) {
+        const u = JSON.parse(saved);
+        // If staff, go to availability. If manager, go to dashboard.
+        return u.role === 'MANAGER' ? 'DASHBOARD' : 'MY_AVAILABILITY';
+      }
+    } catch (e) {}
+    return 'DASHBOARD';
+  });
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Date Management
@@ -317,17 +331,16 @@ export default function App() {
 
     try {
         const updatedUser = { ...currentUser, isAvailabilitySubmitted: true };
+        // This UPDATE triggers the Webhook to send Zalo message automatically
         await api.updateUser({ id: currentUser.id, isAvailabilitySubmitted: true });
         
         setUsers(users.map(u => u.id === currentUser.id ? updatedUser : u));
         setCurrentUser(updatedUser); 
         localStorage.setItem('ls_user', JSON.stringify(updatedUser));
         
-        if (isZaloEnabled) {
-          const manager = users.find(u => u.role === 'MANAGER');
-          if (manager) await ZaloService.notifyAvailabilitySubmitted(updatedUser, manager);
-        }
-        alert("Thành công!");
+        // Removed explicit ZaloService call here to avoid duplicate messages.
+        // The Webhook on 'users' table update handles the notification.
+        alert("Thành công! Admin sẽ nhận được thông báo.");
     } catch (e) {
         alert("Lỗi kết nối");
     }
@@ -371,13 +384,13 @@ export default function App() {
     };
     
     try {
+        // This INSERT triggers the Webhook to send Zalo message automatically
         await api.createRequest(newReq);
         setRequests([newReq, ...requests]);
         setIsRequestModalOpen(false);
-        if (isZaloEnabled) {
-            const manager = users.find(u => u.role === 'MANAGER');
-            if (manager && shift) await ZaloService.notifyNewRequest(newReq, manager, shift);
-        }
+        
+        // Removed explicit ZaloService call here to avoid duplicate messages.
+        // The Webhook on 'requests' table insert handles the notification.
     } catch (e) {
         alert("Lỗi gửi yêu cầu");
     }

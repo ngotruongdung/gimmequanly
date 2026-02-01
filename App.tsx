@@ -1037,6 +1037,74 @@ export default function App() {
           </div>
         )}
 
+        {/* Requests Management Section */}
+        {viewMode === 'REQUESTS' && currentUser && (
+          <div className="space-y-6">
+             {/* Pending Requests Section (Priority) */}
+             {requests.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200 border-dashed text-center">
+                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4"><MessageSquare size={32}/></div>
+                     <h3 className="text-slate-900 font-bold text-lg">Chưa có yêu cầu nào</h3>
+                     <p className="text-slate-500 text-sm mt-1">Các yêu cầu xin nghỉ hoặc đổi ca sẽ xuất hiện tại đây.</p>
+                 </div>
+             ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                   {requests.map(req => {
+                      const shift = shifts.find(s => s.id === req.shiftId);
+                      const isPending = req.status === 'PENDING';
+                      return (
+                         <div key={req.id} className={`p-5 rounded-2xl border flex flex-col gap-4 relative overflow-hidden transition-all ${isPending ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-75 hover:opacity-100'}`}>
+                            {isPending && <div className="absolute top-0 right-0 w-2 h-full bg-orange-500"></div>}
+                            
+                            <div className="flex justify-between items-start">
+                               <div className="flex items-center gap-3">
+                                  <img src={users.find(u => u.id === req.userId)?.avatar} className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover" alt=""/>
+                                  <div>
+                                     <p className="font-bold text-sm text-slate-900">{req.userName}</p>
+                                     <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(req.createdAt).toLocaleDateString('vi-VN')}</p>
+                                  </div>
+                               </div>
+                               <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                   req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                   req.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                   'bg-orange-100 text-orange-700'
+                               }`}>
+                                   {req.status === 'APPROVED' ? 'Đã duyệt' : req.status === 'REJECTED' ? 'Từ chối' : 'Chờ duyệt'}
+                               </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase border ${req.type === 'LEAVE' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
+                                      {req.type === 'LEAVE' ? 'Xin nghỉ' : 'Đổi ca'}
+                                   </span>
+                                   <span>•</span>
+                                   <span>{DAYS_OF_WEEK[req.dayIndex]}</span>
+                                   <span>•</span>
+                                   <span className="font-bold text-slate-800">{shift?.name}</span>
+                                </div>
+                                {req.type === 'SWAP' && (
+                                    <div className="text-xs bg-slate-50 p-2 rounded-lg border border-slate-100 text-slate-600">
+                                       🔄 Đổi với: <span className="font-bold text-slate-900">{req.targetUserName}</span>
+                                    </div>
+                                )}
+                                <p className="text-sm text-slate-700 italic bg-slate-50 p-3 rounded-xl border border-slate-100">"{req.reason}"</p>
+                            </div>
+
+                            {currentUser.role === 'MANAGER' && isPending && (
+                               <div className="flex gap-2 pt-2 mt-auto">
+                                  <button onClick={() => handleProcessRequest(req.id, 'REJECTED')} className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors">Từ chối</button>
+                                  <button onClick={() => handleProcessRequest(req.id, 'APPROVED')} className="flex-1 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-md shadow-indigo-200 hover:bg-indigo-700 transition-all">Chấp thuận</button>
+                               </div>
+                            )}
+                         </div>
+                      );
+                   })}
+                </div>
+             )}
+          </div>
+        )}
+
         {viewMode === 'STAFF_MANAGEMENT' && currentUser && (
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
